@@ -1,0 +1,601 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-dark: #1a1d2e;
+    --bg-card: #22283a;
+    --bg-hover: #2a3149;
+    --primary: #7c3aed;
+    --primary-light: #9f67ff;
+    --secondary: #3b82f6;
+    --text-primary: #ffffff;
+    --text-secondary: #9ca3af;
+    --border: #374151;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #1a1d2e 0%, #0f1117 100%);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.app-container {
+    width: 100%;
+    min-height: 100vh;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* Landing Screen */
+.app-header {
+    padding: 2rem 4rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.landing-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem;
+    min-height: calc(100vh - 100px);
+}
+
+.card-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 1200px;
+    width: 100%;
+}
+
+.feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 3rem;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary);
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    color: white;
+    font-size: 2rem;
+}
+
+.feature-card h2 {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+}
+
+.card-description {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+}
+
+.primary-btn {
+    background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s;
+}
+
+.primary-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+}
+
+.primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.room-code-input {
+    width: 100%;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+.room-code-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    min-width: 300px;
+    max-width: 95vw;
+    text-align: center;
+}
+
+.modal-content h3 {
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.text-input {
+    width: 100%;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.text-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.secondary-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+}
+
+.secondary-btn:hover {
+    background: var(--bg-hover);
+}
+
+/* Game Screen */
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.leave-btn {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.leave-btn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+
+.room-label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.room-code-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+}
+
+.room-code-box span {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--primary-light);
+}
+
+.copy-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: color 0.3s;
+}
+
+.copy-btn:hover {
+    color: var(--primary);
+}
+
+/* Game Layout */
+.game-layout {
+    display: grid;
+    grid-template-columns: 1fr 330px;
+    gap: 1.5rem;
+    padding: 2rem;
+    min-height: calc(100vh - 80px);
+}
+
+.game-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    justify-content: center;
+}
+
+.bingo-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    width: 100%;
+}
+
+.bingo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.bingo-header h2 {
+    font-size: 1.5rem;
+}
+
+.start-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.start-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.randomize-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: all 0.3s;
+}
+
+.randomize-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--primary);
+}
+
+/* CHESSBOARD GRID - Perfect size for all screens */
+.bingo-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    width: 100%;
+    max-width: 450px;
+    aspect-ratio: 1;
+    margin: 0 auto 1rem;
+    gap: 0;
+    border: 2px solid var(--border);
+    border-radius: 12px;  
+    overflow: hidden;
+}
+
+.bingo-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: var(--bg-dark);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    aspect-ratio: 1;
+}
+
+.bingo-cell:nth-child(5n) {
+    border-right: none;
+}
+
+.bingo-cell:nth-child(n+21) {
+    border-bottom: none;
+}
+
+.bingo-cell:hover:not(.marked) {
+    background: var(--bg-hover);
+}
+
+.bingo-cell.marked {
+    background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    color: white;
+    font-weight: bold;
+}
+
+.turn-info {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-dark);
+    border-radius: 0.5rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.turn-info.my-turn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+/* Sidebar */
+.game-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+
+.sidebar-card h3 {
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+}
+
+.players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 0.5rem;
+}
+
+.player-badges {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.host-badge {
+    background: #ef4444;
+    color: white;
+}
+
+.you-badge {
+    background: #10b981;
+    color: white;
+}
+
+.chat-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-messages {
+    flex: 1;
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-message {
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.chat-message strong {
+    color: var(--primary-light);
+}
+
+.chat-input-container {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chat-input {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.chat-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.send-btn {
+    background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.send-btn:hover {
+    transform: scale(1.05);
+}
+
+.winner-content h2 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .game-layout {
+        grid-template-columns: 1fr;
+    }
+    .card-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-header {
+        padding: 1.5rem 2rem;
+    }
+    .app-title {
+        font-size: 2rem;
+    }
+    .game-layout {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    .bingo-section {
+        padding: 1rem;
+    }
+    .bingo-grid {
+        max-width: 100%;
+    }
+    .bingo-cell {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .room-code-display {
+        width: 100%;
+    }
+    .game-layout {
+        padding: 0.5rem;
+    }
+    .bingo-section {
+        padding: 0.75rem;
+    }
+    .bingo-grid {
+        max-width: 100vw;
+    }
+    .bingo-cell {
+        font-size: 1.2rem;
+    }
+}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time BINGO</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Landing Screen -->
+        <div id="landingScreen" class="screen active">
+            <header class="app-header">
+                <h1 class="app-title">Real-Time BINGO</h1>
+            </header>
+
+            <div class="landing-content">
+                <div class="card-container">
+                    <!-- Create Room Card -->
+                    <div class="feature-card">
+                        <div class="icon-circle">✚</div>
+                        <h2>Create Room</h2>
+                        <p class="card-description">Start a new game and invite friends</p>
+                        <button id="createRoomBtn" class="primary-btn">Create New Room</button>
+                    </div>
+
+                    <!-- Join Room Card -->
+                    <div class="feature-card">
+                        <div class="icon-circle">⌘</div>
+                        <h2>Join Room</h2>
+                        <p class="card-description">Enter a room code to join a game</p>
+                        <input type="text" id="roomCodeInput" class="room-code-input" placeholder="Enter room code" maxlength="6">
+                        <button id="joinRoomBtn" class="primary-btn">Join Room</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Name Input Modal -->
+            <div id="nameModal" class="modal hidden">
+                <div class="modal-content">
+                    <h3>Enter Your Name</h3>
+                    <input type="text" id="playerNameInput" class="text-input" placeholder="Your name" maxlength="20">
+                    <div class="modal-buttons">
+                        <button id="confirmNameBtn" class="primary-btn">Continue</button>
+                        <button id="cancelNameBtn" class="secondary-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Room Screen -->
+        <div id="gameScreen" class="screen">
+            <header class="game-header">
+                <button id="leaveRoomBtn" class="leave-btn">← Leave Room</button>
+                <div class="room-code-display">
+                    <span class="room-label">Room Code</span>
+                    <div class="room-code-box">
+                        <span id="gameRoomCode"></span>
+                        <button id="copyCodeBtn" class="copy-btn">📋</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="game-layout">
+                <!-- Main Game Area -->
+                <div class="game-main">
+                    <!-- Bingo Grid Section -->
+                    <div class="bingo-section">
+                        <div class="bingo-header">
+                            <h2>Your BINGO Grid</h2>
+                            <button id="startGameBtn" class="start-btn hidden">Start Game</button>
+                        </div>
+                        <button id="randomizeBtn" class="randomize-btn">🔄 Randomize Grid</button>
+                        <div id="bingoBoard" class="bingo-grid"></div>
+                        <div id="turnInfo" class="turn-info hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="game-sidebar">
+                    <!-- Players List -->
+                    <div class="sidebar-card">
+                        <h3>👥 Players (<span id="playerCount">0</span>)</h3>
+                        <div id="playersList" class="players-list"></div>
+                    </div>
+
+                    <!-- Chat Section -->
+                    <div class="sidebar-card chat-card">
+                        <h3>Chat</h3>
+                        <div id="chatMessages" class="chat-messages"></div>
+                        <div class="chat-input-container">
+                            <input type="text" id="chatInput" class="chat-input" placeholder="Type a message...">
+                            <button id="sendMessageBtn" class="send-btn">📤</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Winner Modal -->
+            <div id="winnerModal" class="modal hidden">
+                <div class="modal-content winner-content">
+                    <h2 id="winnerText"></h2>
+                    <button id="closeWinnerBtn" class="primary-btn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

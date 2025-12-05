@@ -26,7 +26,7 @@ This project allows users to create or join rooms, play turn-based BINGO, chat w
 ## 📂 Project Structure
 
 ```bash
-Real-Time-Bingo/
+concept-forge-bingo/
 ├── public/
 │   ├── index.html        # Game UI
 │   ├── style.css         # Modern styled UI

@@ -252,11 +252,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (room.players.length < 2) {
-            socket.emit('error', 'Need at least 2 players to replay');
-            return;
-        }
-
         room.players.forEach(player => {
             player.board = generateBingoBoard();
             player.markedIndices = [];
@@ -369,17 +364,19 @@ io.on('connection', (socket) => {
                 const player = room.players[playerIndex];
                 room.players.splice(playerIndex, 1);
                 
-                if (room.players.length === 0) {
+                // A room belongs to its host. If the host leaves, close the
+                // room for the remaining players instead of assigning a new
+                // host. A non-host leaving keeps the room reusable.
+                if (room.host === socket.id) {
+                    io.to(roomCode).emit('roomClosed', {
+                        message: `${player.name} (the host) left, so this room has been closed.`
+                    });
+                    delete rooms[roomCode];
+                    console.log(`Room ${roomCode} closed because its host left`);
+                } else if (room.players.length === 0) {
                     delete rooms[roomCode];
                     console.log(`Room ${roomCode} deleted`);
                 } else {
-                    if (room.host === socket.id) {
-                        const newHost = room.players[Math.floor(Math.random() * room.players.length)];
-                        room.host = newHost.id;
-                        newHost.isReady = true;
-                        io.to(newHost.id).emit('becameHost');
-                    }
-                    
                     io.to(roomCode).emit('playerLeft', {
                         playerName: player.name
                     });

@@ -38,6 +38,7 @@ const closeWinnerBtn = document.getElementById('closeWinnerBtn');
 const replayGameBtn = document.getElementById('replayGameBtn');
 const chatNotification = document.getElementById('chatNotification');
 const chatNotificationCount = document.getElementById('chatNotificationCount');
+const roomStatusMessage = document.getElementById('roomStatusMessage');
 
 // Event Listeners
 createRoomBtn.addEventListener('click', () => showNameModal('create'));
@@ -70,10 +71,25 @@ chatNotification.addEventListener('click', () => {
     document.querySelector('.chat-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
     hideChatNotification();
 });
+// Keep focus in the text field when Send is tapped. On mobile, moving focus to
+// the button dismisses the software keyboard.
+sendMessageBtn.addEventListener('pointerdown', (event) => event.preventDefault());
 sendMessageBtn.addEventListener('click', sendMessage);
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
+chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        sendMessage();
+    }
 });
+chatInput.addEventListener('focus', () => {
+    hideChatNotification();
+    keepChatComposerVisible();
+});
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', keepChatComposerVisible);
+    window.visualViewport.addEventListener('scroll', keepChatComposerVisible);
+}
 closeWinnerBtn.addEventListener('click', () => {
     winnerModal.classList.add('hidden');
 });
@@ -124,6 +140,18 @@ function copyRoomCode() {
 
 function startGame() {
     socket.emit('startGame', currentRoomCode);
+}
+
+function returnToLanding(message) {
+    currentRoomCode = '';
+    currentTurnPlayerId = '';
+    gameIsComplete = false;
+    isHost = false;
+    winnerModal.classList.add('hidden');
+    hideChatNotification();
+    roomStatusMessage.textContent = message;
+    roomStatusMessage.classList.remove('hidden');
+    showScreen(landingScreen);
 }
 
 function randomizeBoard() {
@@ -195,6 +223,36 @@ function sendMessage() {
     if (!message) return;
     socket.emit('chatMessage', { roomCode: currentRoomCode, message: message });
     chatInput.value = '';
+    // Refocus after the click handler finishes so the keyboard stays open for
+    // the next message.
+    requestAnimationFrame(() => {
+        chatInput.focus({ preventScroll: true });
+        keepChatComposerVisible();
+    });
+}
+
+function isChatOpen() {
+    if (document.activeElement === chatInput) return true;
+
+    const chatCard = document.querySelector('.chat-card');
+    if (!chatCard) return false;
+
+    const rect = chatCard.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    // A visible chat panel means the user is already reading the conversation.
+    return rect.bottom > 0 && rect.top < viewportHeight;
+}
+
+function keepChatComposerVisible() {
+    if (!window.matchMedia('(max-width: 768px)').matches || document.activeElement !== chatInput) return;
+
+    requestAnimationFrame(() => {
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        const inputRect = chatInput.getBoundingClientRect();
+        if (inputRect.bottom > viewportHeight - 12 || inputRect.top < 0) {
+            chatInput.scrollIntoView({ block: 'end', inline: 'nearest' });
+        }
+    });
 }
 
 function addChatMessage(playerName, message, isSystem = false, notify = false) {
@@ -207,7 +265,7 @@ function addChatMessage(playerName, message, isSystem = false, notify = false) {
     }
     chatMessages.appendChild(msgDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    if (notify && window.matchMedia('(max-width: 768px)').matches) showChatNotification();
+    if (notify && window.matchMedia('(max-width: 768px)').matches && !isChatOpen()) showChatNotification();
 }
 
 function showChatNotification() {
@@ -343,12 +401,8 @@ socket.on('playerLeft', ({ playerName }) => {
     addChatMessage('', `${playerName} left the room`, true);
 });
 
-socket.on('becameHost', () => {
-    isHost = true;
-    readyGameBtn.classList.add('hidden');
-    if (gameIsComplete) replayGameBtn.classList.remove('hidden');
-    else startGameBtn.classList.remove('hidden');
-    addChatMessage('', 'You are now the host!', true);
+socket.on('roomClosed', ({ message }) => {
+    returnToLanding(message);
 });
 
 socket.on('error', (message) => {

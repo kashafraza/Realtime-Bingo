@@ -54,10 +54,23 @@ body {
 
 .landing-content {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     padding: 4rem;
     min-height: calc(100vh - 100px);
+}
+
+.room-status-message {
+    width: 100%;
+    max-width: 1200px;
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    color: #fde68a;
+    background: rgba(180, 83, 9, 0.18);
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 0.5rem;
+    text-align: center;
 }
 
 .card-container {
@@ -634,18 +647,6 @@ body {
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
         cursor: pointer;
     }
-    .chat-notification::after {
-        content: '';
-        position: absolute;
-        right: 8px;
-        bottom: -6px;
-        width: 12px;
-        height: 12px;
-        background: #3b82f6;
-        transform: rotate(45deg);
-        border-right: 1px solid rgba(255, 255, 255, 0.35);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.35);
-    }
     .chat-notification.hidden {
         display: none;
     }
@@ -723,6 +724,9 @@ body {
     .primary-btn,
     .secondary-btn {
         min-height: 44px;
+    }
+    .chat-input-container {
+        scroll-margin-bottom: max(0.75rem, env(safe-area-inset-bottom));
     }
     .landing-content {
         align-items: flex-start;

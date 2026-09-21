@@ -73,6 +73,7 @@
                         <button id="randomizeBtn" class="randomize-btn">🔄 Randomize Grid</button>
                         <div id="bingoBoard" class="bingo-grid"></div>
                         <div id="turnInfo" class="turn-info hidden"></div>
+                        <button id="replayGameBtn" class="start-btn replay-btn hidden">Replay Game</button>
                     </div>
                 </div>
 
@@ -95,6 +96,11 @@
                     </div>
                 </div>
             </div>
+
+            <button id="chatNotification" class="chat-notification hidden" type="button" aria-label="New chat messages">
+                <span class="chat-notification-icon">💬</span>
+                <span id="chatNotificationCount" class="chat-notification-count">0</span>
+            </button>
 
             <!-- Winner Modal -->
             <div id="winnerModal" class="modal hidden">

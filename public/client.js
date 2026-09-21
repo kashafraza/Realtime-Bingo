@@ -6,6 +6,9 @@ let isHost = false;
 let myPlayerId = '';
 let currentTurnPlayerId = '';
 let pendingAction = null;
+let unreadChatMessages = 0;
+let chatNotificationTimer = null;
+let gameIsComplete = false;
 
 const landingScreen = document.getElementById('landingScreen');
 const gameScreen = document.getElementById('gameScreen');
@@ -31,6 +34,9 @@ const sendMessageBtn = document.getElementById('sendMessageBtn');
 const winnerModal = document.getElementById('winnerModal');
 const winnerText = document.getElementById('winnerText');
 const closeWinnerBtn = document.getElementById('closeWinnerBtn');
+const replayGameBtn = document.getElementById('replayGameBtn');
+const chatNotification = document.getElementById('chatNotification');
+const chatNotificationCount = document.getElementById('chatNotificationCount');
 
 // Event Listeners
 createRoomBtn.addEventListener('click', () => showNameModal('create'));
@@ -54,6 +60,11 @@ leaveRoomBtn.addEventListener('click', leaveRoom);
 copyCodeBtn.addEventListener('click', copyRoomCode);
 startGameBtn.addEventListener('click', startGame);
 randomizeBtn.addEventListener('click', randomizeBoard);
+replayGameBtn.addEventListener('click', () => socket.emit('replayGame', currentRoomCode));
+chatNotification.addEventListener('click', () => {
+    document.querySelector('.chat-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    hideChatNotification();
+});
 sendMessageBtn.addEventListener('click', sendMessage);
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
@@ -144,6 +155,27 @@ function updateTurnDisplay(playerName, isMyTurn) {
     }
 }
 
+function renderPlayers(players, count, hostId) {
+    playerCount.textContent = count;
+    playersList.innerHTML = '';
+    isHost = hostId === socket.id;
+
+    players.forEach(player => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'player-item';
+        const badges = [];
+        if (player.id === hostId || player.isHost) badges.push('<span class="badge host-badge">HOST</span>');
+        if (player.id === socket.id) badges.push('<span class="badge you-badge">YOU</span>');
+        playerDiv.innerHTML = `<span>${player.name}</span><div class="player-badges">${badges.join('')}</div>`;
+        playersList.appendChild(playerDiv);
+    });
+
+    if (isHost && !startGameBtn.classList.contains('hidden')) {
+        startGameBtn.disabled = count < 2;
+        startGameBtn.textContent = count >= 2 ? 'Start Game' : 'Waiting for players...';
+    }
+}
+
 function sendMessage() {
     const message = chatInput.value.trim();
     if (!message) return;
@@ -151,7 +183,7 @@ function sendMessage() {
     chatInput.value = '';
 }
 
-function addChatMessage(playerName, message, isSystem = false) {
+function addChatMessage(playerName, message, isSystem = false, notify = false) {
     const msgDiv = document.createElement('div');
     msgDiv.className = 'chat-message';
     if (isSystem) {
@@ -161,6 +193,22 @@ function addChatMessage(playerName, message, isSystem = false) {
     }
     chatMessages.appendChild(msgDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (notify && window.matchMedia('(max-width: 768px)').matches) showChatNotification();
+}
+
+function showChatNotification() {
+    unreadChatMessages++;
+    chatNotificationCount.textContent = unreadChatMessages > 9 ? '9+' : unreadChatMessages;
+    chatNotification.classList.remove('hidden');
+    clearTimeout(chatNotificationTimer);
+    chatNotificationTimer = setTimeout(hideChatNotification, 3000);
+}
+
+function hideChatNotification() {
+    unreadChatMessages = 0;
+    chatNotification.classList.add('hidden');
+    clearTimeout(chatNotificationTimer);
+    chatNotificationTimer = null;
 }
 
 // Socket Events
@@ -191,37 +239,20 @@ socket.on('roomJoined', ({ roomCode, board, isHost: host }) => {
     addChatMessage('', 'You joined the room!', true);
 });
 
-socket.on('updatePlayers', ({ players, playerCount: count }) => {
-    playerCount.textContent = count;
-    playersList.innerHTML = '';
-    players.forEach((player, index) => {
-        const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-item';
-        const badges = [];
-        if (index === 0) badges.push('<span class="badge host-badge">HOST</span>');
-        if (player.id === socket.id) badges.push('<span class="badge you-badge">YOU</span>');
-        playerDiv.innerHTML = `
-            <span>${player.name}</span>
-            <div class="player-badges">${badges.join('')}</div>
-        `;
-        playersList.appendChild(playerDiv);
-    });
-    if (isHost) {
-        if (count >= 2) {
-            startGameBtn.disabled = false;
-            startGameBtn.textContent = 'Start Game';
-        } else {
-            startGameBtn.disabled = true;
-            startGameBtn.textContent = 'Waiting for players...';
-        }
-    }
+socket.on('updatePlayers', ({ players, playerCount: count, hostId }) => {
+    renderPlayers(players, count, hostId);
 });
 
 socket.on('gameStarted', ({ currentPlayer, currentPlayerId }) => {
+    gameIsComplete = false;
     currentTurnPlayerId = currentPlayerId;
     const isMyTurn = currentPlayerId === socket.id;
     startGameBtn.classList.add('hidden');
     randomizeBtn.classList.add('hidden');
+    replayGameBtn.classList.add('hidden');
+    Array.from(bingoBoard.children).forEach(cell => {
+        cell.style.pointerEvents = '';
+    });
     updateTurnDisplay(currentPlayer, isMyTurn);
     addChatMessage('', 'Game started!', true);
 });
@@ -246,6 +277,7 @@ socket.on('turnChanged', ({ currentPlayer, currentPlayerId }) => {
 });
 
 socket.on('gameWon', ({ winner, winnerId, winners = [] }) => {
+    gameIsComplete = true;
     const isTie = winners.length > 1;
     const isWinner = winnerId === socket.id;
     const winnerNames = winners.map(player => player.name).join(' and ');
@@ -256,10 +288,13 @@ socket.on('gameWon', ({ winner, winnerId, winners = [] }) => {
         winnerText.textContent = isWinner ? '🎉 You Won! 🎉' : `🏆 ${winner} Won! 🏆`;
     }
     winnerModal.classList.remove('hidden');
+    currentTurnPlayerId = '';
     Array.from(bingoBoard.children).forEach(cell => {
         cell.style.pointerEvents = 'none';
     });
     addChatMessage('', isTie ? `${winnerNames} won the game!` : `${winner} won the game!`, true);
+    turnInfo.classList.add('hidden');
+    if (isHost) replayGameBtn.classList.remove('hidden');
 });
 
 socket.on('boardRandomized', ({ board }) => {
@@ -267,31 +302,18 @@ socket.on('boardRandomized', ({ board }) => {
     createBingoBoard(board);
 });
 
-socket.on('chatMessage', ({ playerName, message }) => {
-    addChatMessage(playerName, message);
+socket.on('chatMessage', ({ playerName, playerId, message }) => {
+    addChatMessage(playerName, message, false, playerId !== socket.id);
 });
 
-socket.on('playerLeft', ({ playerName, players, playerCount: count }) => {
-    playerCount.textContent = count;
-    playersList.innerHTML = '';
-    players.forEach((player, index) => {
-        const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-item';
-        const badges = [];
-        if (index === 0) badges.push('<span class="badge host-badge">HOST</span>');
-        if (player.id === socket.id) badges.push('<span class="badge you-badge">YOU</span>');
-        playerDiv.innerHTML = `
-            <span>${player.name}</span>
-            <div class="player-badges">${badges.join('')}</div>
-        `;
-        playersList.appendChild(playerDiv);
-    });
+socket.on('playerLeft', ({ playerName }) => {
     addChatMessage('', `${playerName} left the room`, true);
 });
 
 socket.on('becameHost', () => {
     isHost = true;
-    startGameBtn.classList.remove('hidden');
+    if (gameIsComplete) replayGameBtn.classList.remove('hidden');
+    else startGameBtn.classList.remove('hidden');
     addChatMessage('', 'You are now the host!', true);
 });
 

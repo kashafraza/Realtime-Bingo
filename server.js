@@ -6,6 +6,26 @@ const io = require('socket.io')(http);
 app.use(express.static('public'));
 
 const rooms = {};
+const MAX_PLAYERS_PER_ROOM = 5;
+
+function getRoomPlayers(room) {
+    return room.players.map(player => ({
+        id: player.id,
+        name: player.name,
+        isHost: player.id === room.host
+    }));
+}
+
+function broadcastRoomPlayers(roomCode) {
+    const room = rooms[roomCode];
+    if (!room) return;
+
+    io.to(roomCode).emit('updatePlayers', {
+        players: getRoomPlayers(room),
+        playerCount: room.players.length,
+        hostId: room.host
+    });
+}
 
 function generateBingoBoard() {
     const numbers = Array.from({ length: 25 }, (_, i) => i + 1);
@@ -87,6 +107,7 @@ io.on('connection', (socket) => {
         
         socket.join(roomCode);
         socket.emit('roomCreated', { roomCode, board, isHost: true });
+        broadcastRoomPlayers(roomCode);
         console.log(`Room ${roomCode} created by ${playerName}`);
     });
     
@@ -102,6 +123,11 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Game already in progress');
             return;
         }
+
+        if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
+            socket.emit('error', `Room is full (maximum ${MAX_PLAYERS_PER_ROOM} players)`);
+            return;
+        }
         
         const board = generateBingoBoard();
         room.players.push({
@@ -114,10 +140,7 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
         socket.emit('roomJoined', { roomCode, board, isHost: false });
         
-        io.to(roomCode).emit('updatePlayers', {
-            players: room.players.map(p => ({ name: p.name, id: p.id })),
-            playerCount: room.players.length
-        });
+        broadcastRoomPlayers(roomCode);
         
         console.log(`${playerName} joined room ${roomCode}`);
     });
@@ -173,6 +196,47 @@ io.on('connection', (socket) => {
         player.board = generateBingoBoard();
         player.markedIndices = [];
         socket.emit('boardRandomized', { board: player.board });
+    });
+
+    socket.on('replayGame', (roomCode) => {
+        const room = rooms[roomCode];
+
+        if (!room) {
+            socket.emit('error', 'Room not found');
+            return;
+        }
+
+        if (room.host !== socket.id) {
+            socket.emit('error', 'Only the host can replay the game');
+            return;
+        }
+
+        if (room.gameStarted) {
+            socket.emit('error', 'The current game is still in progress');
+            return;
+        }
+
+        if (room.players.length < 2) {
+            socket.emit('error', 'Need at least 2 players to replay');
+            return;
+        }
+
+        room.players.forEach(player => {
+            player.board = generateBingoBoard();
+            player.markedIndices = [];
+        });
+        room.gameStarted = true;
+        room.currentTurn = 0;
+
+        room.players.forEach(player => {
+            io.to(player.id).emit('boardRandomized', { board: player.board });
+        });
+
+        io.to(roomCode).emit('gameStarted', {
+            currentPlayer: room.players[0].name,
+            currentPlayerId: room.players[0].id,
+            isReplay: true
+        });
     });
     
     socket.on('selectNumber', ({ roomCode, numberIndex }) => {
@@ -230,6 +294,7 @@ io.on('connection', (socket) => {
                 winners: winningPlayers.map(player => ({ id: player.id, name: player.name }))
             });
             room.gameStarted = false;
+            room.currentTurn = null;
             console.log(`${winningPlayers.map(player => player.name).join(', ')} won in room ${roomCode}`);
             return;
         }
@@ -251,6 +316,7 @@ io.on('connection', (socket) => {
         if (player) {
             io.to(roomCode).emit('chatMessage', {
                 playerName: player.name,
+                playerId: player.id,
                 message: message
             });
         }
@@ -277,10 +343,9 @@ io.on('connection', (socket) => {
                     }
                     
                     io.to(roomCode).emit('playerLeft', {
-                        playerName: player.name,
-                        players: room.players.map(p => ({ name: p.name, id: p.id })),
-                        playerCount: room.players.length
+                        playerName: player.name
                     });
+                    broadcastRoomPlayers(roomCode);
                 }
             }
         });

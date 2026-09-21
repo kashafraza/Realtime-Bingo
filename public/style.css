@@ -313,6 +313,12 @@ body {
     font-size: 1.5rem;
 }
 
+.game-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .start-btn {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
@@ -425,6 +431,21 @@ body {
     flex-direction: column;
     gap: 1.5rem;
     min-width: 0;
+}
+
+.ready-btn {
+    padding: 0.75rem 1rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ready-btn.is-ready {
+    background: #059669;
+    border-color: #10b981;
 }
 
 .replay-btn {
@@ -646,6 +667,11 @@ body {
     }
 }
 
+.ready-badge {
+    background: #059669;
+    color: white;
+}
+
 @media (max-width: 480px) {
     .game-header {
         padding: max(1rem, env(safe-area-inset-top)) 1rem 1rem;
@@ -682,6 +708,13 @@ body {
         flex-direction: column;
         gap: 0.75rem;
         margin-bottom: 1rem;
+    }
+    .game-actions {
+        width: 100%;
+    }
+    .game-actions .ready-btn,
+    .game-actions .start-btn {
+        flex: 1;
     }
     .start-btn,
     .randomize-btn,

@@ -24,6 +24,7 @@ const gameRoomCode = document.getElementById('gameRoomCode');
 const copyCodeBtn = document.getElementById('copyCodeBtn');
 const bingoBoard = document.getElementById('bingoBoard');
 const startGameBtn = document.getElementById('startGameBtn');
+const readyGameBtn = document.getElementById('readyGameBtn');
 const randomizeBtn = document.getElementById('randomizeBtn');
 const turnInfo = document.getElementById('turnInfo');
 const playerCount = document.getElementById('playerCount');
@@ -59,6 +60,10 @@ playerNameInput.addEventListener('keypress', (e) => {
 leaveRoomBtn.addEventListener('click', leaveRoom);
 copyCodeBtn.addEventListener('click', copyRoomCode);
 startGameBtn.addEventListener('click', startGame);
+readyGameBtn.addEventListener('click', () => {
+    const willBeReady = !readyGameBtn.classList.contains('is-ready');
+    socket.emit('setReady', { roomCode: currentRoomCode, isReady: willBeReady });
+});
 randomizeBtn.addEventListener('click', randomizeBoard);
 replayGameBtn.addEventListener('click', () => socket.emit('replayGame', currentRoomCode));
 chatNotification.addEventListener('click', () => {
@@ -165,14 +170,23 @@ function renderPlayers(players, count, hostId) {
         playerDiv.className = 'player-item';
         const badges = [];
         if (player.id === hostId || player.isHost) badges.push('<span class="badge host-badge">HOST</span>');
+        if (player.isReady) badges.push('<span class="badge ready-badge">READY</span>');
         if (player.id === socket.id) badges.push('<span class="badge you-badge">YOU</span>');
         playerDiv.innerHTML = `<span>${player.name}</span><div class="player-badges">${badges.join('')}</div>`;
         playersList.appendChild(playerDiv);
     });
 
+    const me = players.find(player => player.id === socket.id);
+    const iAmReady = Boolean(me?.isReady);
+    readyGameBtn.classList.toggle('is-ready', iAmReady);
+    readyGameBtn.textContent = iAmReady ? 'Ready ✓' : "I'm Ready";
+    const isLobby = !gameIsComplete && !currentTurnPlayerId;
+    readyGameBtn.classList.toggle('hidden', isHost || !isLobby);
+
     if (isHost && !startGameBtn.classList.contains('hidden')) {
-        startGameBtn.disabled = count < 2;
-        startGameBtn.textContent = count >= 2 ? 'Start Game' : 'Waiting for players...';
+        const everyoneReady = count >= 2 && players.every(player => player.isReady);
+        startGameBtn.disabled = !everyoneReady;
+        startGameBtn.textContent = everyoneReady ? 'Start Game' : 'Waiting for everyone to get ready...';
     }
 }
 
@@ -222,8 +236,9 @@ socket.on('roomCreated', ({ roomCode, board, isHost: host }) => {
     if (isHost) {
         startGameBtn.classList.remove('hidden');
         startGameBtn.disabled = true;
-        startGameBtn.textContent = 'Waiting for players...';
+        startGameBtn.textContent = 'Waiting for everyone to get ready...';
     }
+    readyGameBtn.classList.toggle('hidden', isHost);
     showScreen(gameScreen);
     addChatMessage('', 'Welcome to the room!', true);
 });
@@ -235,6 +250,7 @@ socket.on('roomJoined', ({ roomCode, board, isHost: host }) => {
     myPlayerId = socket.id;
     gameRoomCode.textContent = roomCode;
     createBingoBoard(board);
+    readyGameBtn.classList.toggle('hidden', isHost);
     showScreen(gameScreen);
     addChatMessage('', 'You joined the room!', true);
 });
@@ -248,6 +264,7 @@ socket.on('gameStarted', ({ currentPlayer, currentPlayerId }) => {
     currentTurnPlayerId = currentPlayerId;
     const isMyTurn = currentPlayerId === socket.id;
     startGameBtn.classList.add('hidden');
+    readyGameBtn.classList.add('hidden');
     randomizeBtn.classList.add('hidden');
     replayGameBtn.classList.add('hidden');
     Array.from(bingoBoard.children).forEach(cell => {
@@ -302,6 +319,22 @@ socket.on('boardRandomized', ({ board }) => {
     createBingoBoard(board);
 });
 
+socket.on('gameReset', ({ message }) => {
+    gameIsComplete = false;
+    currentTurnPlayerId = '';
+    winnerModal.classList.add('hidden');
+    turnInfo.classList.add('hidden');
+    randomizeBtn.classList.remove('hidden');
+    readyGameBtn.classList.toggle('hidden', isHost);
+    replayGameBtn.classList.add('hidden');
+    if (isHost) {
+        startGameBtn.classList.remove('hidden');
+        startGameBtn.disabled = true;
+        startGameBtn.textContent = 'Waiting for everyone to get ready...';
+    }
+    addChatMessage('', message, true);
+});
+
 socket.on('chatMessage', ({ playerName, playerId, message }) => {
     addChatMessage(playerName, message, false, playerId !== socket.id);
 });
@@ -312,6 +345,7 @@ socket.on('playerLeft', ({ playerName }) => {
 
 socket.on('becameHost', () => {
     isHost = true;
+    readyGameBtn.classList.add('hidden');
     if (gameIsComplete) replayGameBtn.classList.remove('hidden');
     else startGameBtn.classList.remove('hidden');
     addChatMessage('', 'You are now the host!', true);

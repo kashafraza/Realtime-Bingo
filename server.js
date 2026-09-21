@@ -12,7 +12,8 @@ function getRoomPlayers(room) {
     return room.players.map(player => ({
         id: player.id,
         name: player.name,
-        isHost: player.id === room.host
+        isHost: player.id === room.host,
+        isReady: player.isReady
     }));
 }
 
@@ -99,7 +100,8 @@ io.on('connection', (socket) => {
                 id: socket.id,
                 name: playerName,
                 board: board,
-                markedIndices: []
+                markedIndices: [],
+                isReady: true
             }],
             gameStarted: false,
             currentTurn: 0
@@ -134,7 +136,8 @@ io.on('connection', (socket) => {
             id: socket.id,
             name: playerName,
             board: board,
-            markedIndices: []
+            markedIndices: [],
+            isReady: false
         });
         
         socket.join(roomCode);
@@ -160,6 +163,11 @@ io.on('connection', (socket) => {
         
         if (room.players.length < 2) {
             socket.emit('error', 'Need at least 2 players to start');
+            return;
+        }
+
+        if (!room.players.every(player => player.id === room.host || player.isReady)) {
+            socket.emit('error', 'Wait until every player is ready');
             return;
         }
         
@@ -195,7 +203,35 @@ io.on('connection', (socket) => {
 
         player.board = generateBingoBoard();
         player.markedIndices = [];
+        player.isReady = player.id === room.host;
         socket.emit('boardRandomized', { board: player.board });
+        broadcastRoomPlayers(roomCode);
+    });
+
+    socket.on('setReady', ({ roomCode, isReady }) => {
+        const room = rooms[roomCode];
+        if (!room) {
+            socket.emit('error', 'Room not found');
+            return;
+        }
+        if (room.gameStarted) {
+            socket.emit('error', 'Readiness cannot be changed after the game starts');
+            return;
+        }
+
+        const player = room.players.find(player => player.id === socket.id);
+        if (!player) {
+            socket.emit('error', 'You are not in this room');
+            return;
+        }
+
+        if (player.id === room.host) {
+            socket.emit('error', 'The host is always ready');
+            return;
+        }
+
+        player.isReady = Boolean(isReady);
+        broadcastRoomPlayers(roomCode);
     });
 
     socket.on('replayGame', (roomCode) => {
@@ -224,18 +260,18 @@ io.on('connection', (socket) => {
         room.players.forEach(player => {
             player.board = generateBingoBoard();
             player.markedIndices = [];
+            player.isReady = player.id === room.host;
         });
-        room.gameStarted = true;
+        room.gameStarted = false;
         room.currentTurn = 0;
 
         room.players.forEach(player => {
             io.to(player.id).emit('boardRandomized', { board: player.board });
         });
 
-        io.to(roomCode).emit('gameStarted', {
-            currentPlayer: room.players[0].name,
-            currentPlayerId: room.players[0].id,
-            isReplay: true
+        broadcastRoomPlayers(roomCode);
+        io.to(roomCode).emit('gameReset', {
+            message: 'A new game is ready. Randomize your grid, then mark yourself ready!'
         });
     });
     
@@ -338,8 +374,10 @@ io.on('connection', (socket) => {
                     console.log(`Room ${roomCode} deleted`);
                 } else {
                     if (room.host === socket.id) {
-                        room.host = room.players[0].id;
-                        io.to(room.players[0].id).emit('becameHost');
+                        const newHost = room.players[Math.floor(Math.random() * room.players.length)];
+                        room.host = newHost.id;
+                        newHost.isReady = true;
+                        io.to(newHost.id).emit('becameHost');
                     }
                     
                     io.to(roomCode).emit('playerLeft', {

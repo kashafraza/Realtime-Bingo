@@ -111,12 +111,7 @@ function startGame() {
 }
 
 function randomizeBoard() {
-    if (!myBoard || myBoard.length === 0) return;
-    for (let i = myBoard.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [myBoard[i], myBoard[j]] = [myBoard[j], myBoard[i]];
-    }
-    createBingoBoard(myBoard);
+    socket.emit('randomizeBoard', currentRoomCode);
 }
 
 function createBingoBoard(board) {
@@ -250,14 +245,26 @@ socket.on('turnChanged', ({ currentPlayer, currentPlayerId }) => {
     updateTurnDisplay(currentPlayer, isMyTurn);
 });
 
-socket.on('gameWon', ({ winner, winnerId }) => {
+socket.on('gameWon', ({ winner, winnerId, winners = [] }) => {
+    const isTie = winners.length > 1;
     const isWinner = winnerId === socket.id;
-    winnerText.textContent = isWinner ? '🎉 You Won! 🎉' : `🏆 ${winner} Won! 🏆`;
+    const winnerNames = winners.map(player => player.name).join(' and ');
+
+    if (isTie) {
+        winnerText.textContent = `🏆 Tie: ${winnerNames} won! 🏆`;
+    } else {
+        winnerText.textContent = isWinner ? '🎉 You Won! 🎉' : `🏆 ${winner} Won! 🏆`;
+    }
     winnerModal.classList.remove('hidden');
     Array.from(bingoBoard.children).forEach(cell => {
         cell.style.pointerEvents = 'none';
     });
-    addChatMessage('', `${winner} won the game!`, true);
+    addChatMessage('', isTie ? `${winnerNames} won the game!` : `${winner} won the game!`, true);
+});
+
+socket.on('boardRandomized', ({ board }) => {
+    myBoard = board;
+    createBingoBoard(board);
 });
 
 socket.on('chatMessage', ({ playerName, message }) => {

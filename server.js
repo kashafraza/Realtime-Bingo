@@ -150,6 +150,30 @@ io.on('connection', (socket) => {
         
         console.log(`Game started in room ${roomCode}`);
     });
+
+    socket.on('randomizeBoard', (roomCode) => {
+        const room = rooms[roomCode];
+
+        if (!room) {
+            socket.emit('error', 'Room not found');
+            return;
+        }
+
+        if (room.gameStarted) {
+            socket.emit('error', 'The grid cannot be randomized after the game starts');
+            return;
+        }
+
+        const player = room.players.find(player => player.id === socket.id);
+        if (!player) {
+            socket.emit('error', 'You are not in this room');
+            return;
+        }
+
+        player.board = generateBingoBoard();
+        player.markedIndices = [];
+        socket.emit('boardRandomized', { board: player.board });
+    });
     
     socket.on('selectNumber', ({ roomCode, numberIndex }) => {
         const room = rooms[roomCode];
@@ -165,14 +189,21 @@ io.on('connection', (socket) => {
             return;
         }
         
+        // The client sends an index from its own shuffled board.  Resolve that
+        // index to the number on the server, then find that same number on
+        // every other shuffled board.  Indices cannot be shared between boards
+        // because each player has a different layout.
+        if (!Number.isInteger(numberIndex) || numberIndex < 0 || numberIndex >= currentPlayer.board.length) {
+            socket.emit('error', 'Invalid board cell');
+            return;
+        }
+
         const selectedNumber = currentPlayer.board[numberIndex];
         
         room.players.forEach(player => {
-            for (let i = 0; i < player.board.length; i++) {
-                if (player.board[i] === selectedNumber && !player.markedIndices.includes(i)) {
-                    player.markedIndices.push(i);
-                    break;
-                }
+            const matchingIndex = player.board.indexOf(selectedNumber);
+            if (matchingIndex !== -1 && !player.markedIndices.includes(matchingIndex)) {
+                player.markedIndices.push(matchingIndex);
             }
         });
         
@@ -187,13 +218,19 @@ io.on('connection', (socket) => {
             allPlayerBoards: allPlayerBoards
         });
         
-        if (checkWin(currentPlayer.markedIndices)) {
+        // A called number can complete five lines on a different player's
+        // shuffled board.  Check every board after applying the number, not
+        // just the board belonging to the player whose turn it was.
+        const winningPlayers = room.players.filter(player => checkWin(player.markedIndices));
+
+        if (winningPlayers.length > 0) {
             io.to(roomCode).emit('gameWon', {
-                winner: currentPlayer.name,
-                winnerId: currentPlayer.id
+                winner: winningPlayers[0].name,
+                winnerId: winningPlayers[0].id,
+                winners: winningPlayers.map(player => ({ id: player.id, name: player.name }))
             });
             room.gameStarted = false;
-            console.log(`${currentPlayer.name} won in room ${roomCode}`);
+            console.log(`${winningPlayers.map(player => player.name).join(', ')} won in room ${roomCode}`);
             return;
         }
         

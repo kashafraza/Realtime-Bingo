@@ -39,7 +39,7 @@ const replayGameBtn = document.getElementById('replayGameBtn');
 const chatNotification = document.getElementById('chatNotification');
 const chatNotificationCount = document.getElementById('chatNotificationCount');
 const roomStatusMessage = document.getElementById('roomStatusMessage');
-const viewerCount = document.getElementById('viewerCount');
+const viewerCountValues = document.querySelectorAll('.viewer-count-value');
 
 // Event Listeners
 createRoomBtn.addEventListener('click', () => showNameModal('create'));
@@ -126,7 +126,9 @@ function confirmName() {
 }
 
 socket.on('viewerCount', (count) => {
-    viewerCount.textContent = count;
+    viewerCountValues.forEach((viewerCount) => {
+        viewerCount.textContent = count;
+    });
 });
 
 function leaveRoom() {

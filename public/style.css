@@ -51,10 +51,12 @@ body {
 }
 
 .site-footer {
-    position: fixed;
-    right: 1rem;
-    bottom: 0.75rem;
-    z-index: 10;
+    padding: 1rem 1.5rem;
+    text-align: right;
+}
+
+.game-viewer-count {
+    display: none;
 }
 
 .app-title {
@@ -616,6 +618,14 @@ body {
 }
 
 @media (max-width: 768px) {
+    #gameScreen.active ~ .site-footer {
+        display: none;
+    }
+    .game-viewer-count {
+        display: block;
+        padding: 0 0.25rem;
+        text-align: right;
+    }
     .app-header {
         padding: 1.25rem 1.5rem;
     }

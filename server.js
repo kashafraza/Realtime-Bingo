@@ -30,6 +30,8 @@ function getSheetsClient() {
 }
 
 const sheets = getSheetsClient();
+let peakOnlineUsers = null;
+let peakOnlineUpdateQueue = Promise.resolve();
 
 async function recordRoomPlayer(playerName, roomCode) {
     if (!sheets) {
@@ -59,8 +61,39 @@ async function recordRoomPlayer(playerName, roomCode) {
     }
 }
 
+function recordPeakOnlineUsers(onlineUsers) {
+    if (!sheets) return;
+
+    peakOnlineUpdateQueue = peakOnlineUpdateQueue.then(async () => {
+        if (peakOnlineUsers !== null && onlineUsers <= peakOnlineUsers) return;
+
+        try {
+            const response = await sheets.spreadsheets.values.get({
+                spreadsheetId: GOOGLE_SHEET_ID,
+                range: 'Stats!A2'
+            });
+            const savedPeak = Number.parseInt(response.data.values?.[0]?.[0], 10) || 0;
+            peakOnlineUsers = savedPeak;
+
+            if (onlineUsers > savedPeak) {
+                await sheets.spreadsheets.values.update({
+                    spreadsheetId: GOOGLE_SHEET_ID,
+                    range: 'Stats!A2',
+                    valueInputOption: 'USER_ENTERED',
+                    requestBody: { values: [[onlineUsers]] }
+                });
+                peakOnlineUsers = onlineUsers;
+            }
+        } catch (error) {
+            console.error('Could not update peak online users in Google Sheets:', error.message);
+        }
+    });
+}
+
 function broadcastViewerCount() {
-    io.emit('viewerCount', io.of('/').sockets.size);
+    const onlineUsers = io.of('/').sockets.size;
+    io.emit('viewerCount', onlineUsers);
+    recordPeakOnlineUsers(onlineUsers);
 }
 
 function getRoomPlayers(room) {

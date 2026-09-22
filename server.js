@@ -31,7 +31,7 @@ function getSheetsClient() {
 
 const sheets = getSheetsClient();
 
-async function recordRoomCreator(playerName, roomCode) {
+async function recordRoomPlayer(playerName, roomCode) {
     if (!sheets) {
         console.warn('Google Sheets logging is disabled: required environment variables are missing.');
         return;
@@ -55,7 +55,7 @@ async function recordRoomCreator(playerName, roomCode) {
             requestBody: { values: [[playerName, roomCode, dateTime]] }
         });
     } catch (error) {
-        console.error(`Could not record room creator for ${roomCode} in Google Sheets:`, error.message);
+        console.error(`Could not record player for ${roomCode} in Google Sheets:`, error.message);
     }
 }
 
@@ -167,7 +167,7 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', { roomCode, board, isHost: true });
         broadcastRoomPlayers(roomCode);
         console.log(`Room ${roomCode} created by ${playerName}`);
-        void recordRoomCreator(playerName, roomCode);
+        void recordRoomPlayer(playerName, roomCode);
     });
     
     socket.on('joinRoom', ({ roomCode, playerName }) => {
@@ -203,6 +203,7 @@ io.on('connection', (socket) => {
         broadcastRoomPlayers(roomCode);
         
         console.log(`${playerName} joined room ${roomCode}`);
+        void recordRoomPlayer(playerName, roomCode);
     });
     
     socket.on('startGame', (roomCode) => {

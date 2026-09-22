@@ -1,4 +1,5 @@
 const express = require('express');
+const { google } = require('googleapis');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
@@ -7,6 +8,60 @@ app.use(express.static('public'));
 
 const rooms = {};
 const MAX_PLAYERS_PER_ROOM = 5;
+
+const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\\\n/g, '\\n');
+
+function getSheetsClient() {
+    if (!GOOGLE_SHEET_ID || !GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
+        return null;
+    }
+
+    const auth = new google.auth.GoogleAuth({
+        credentials: {
+            client_email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            private_key: GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+        },
+        scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+
+    return google.sheets({ version: 'v4', auth });
+}
+
+const sheets = getSheetsClient();
+
+async function recordRoomCreator(playerName, roomCode) {
+    if (!sheets) {
+        console.warn('Google Sheets logging is disabled: required environment variables are missing.');
+        return;
+    }
+
+    try {
+        const dateTime = new Intl.DateTimeFormat('en-GB', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(new Date()).replace(',', '');
+
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: GOOGLE_SHEET_ID,
+            range: 'Players!A:C',
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[playerName, roomCode, dateTime]] }
+        });
+    } catch (error) {
+        console.error(`Could not record room creator for ${roomCode} in Google Sheets:`, error.message);
+    }
+}
+
+function broadcastViewerCount() {
+    io.emit('viewerCount', io.of('/').sockets.size);
+}
 
 function getRoomPlayers(room) {
     return room.players.map(player => ({
@@ -89,6 +144,7 @@ function generateRoomCode() {
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
+    broadcastViewerCount();
     
     socket.on('createRoom', (playerName) => {
         const roomCode = generateRoomCode();
@@ -111,6 +167,7 @@ io.on('connection', (socket) => {
         socket.emit('roomCreated', { roomCode, board, isHost: true });
         broadcastRoomPlayers(roomCode);
         console.log(`Room ${roomCode} created by ${playerName}`);
+        void recordRoomCreator(playerName, roomCode);
     });
     
     socket.on('joinRoom', ({ roomCode, playerName }) => {
@@ -355,6 +412,7 @@ io.on('connection', (socket) => {
     
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        setImmediate(broadcastViewerCount);
         
         Object.keys(rooms).forEach(roomCode => {
             const room = rooms[roomCode];
